@@ -1,10 +1,5 @@
 const request = require('superagent');
-require('superagent-proxy')(request);
 const Promise = require('bluebird');
-
-
-var proxy = 'http://proxy.vhb.de:80';
-
 
 class Spectre {
   constructor(url) {
@@ -16,10 +11,8 @@ class Spectre {
     return new Promise((resolve, reject) => {
       request
         .post(this.url + '/runs')
-        //.proxy(proxy)
         .send({ project, suite })
         .end((err, res) => {
-          //console.log(res.body)
           err ? reject(err) : resolve(res.body);
         });
     });
@@ -29,7 +22,6 @@ class Spectre {
     return new Promise((resolve, reject) => {
       request
         .post(this.url + '/tests')
-        //.proxy(proxy)
         .field('test[run_id]', run_id)
         .field('test[name]', name)
         .field('test[browser]', browser)

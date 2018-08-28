@@ -14,7 +14,6 @@
     "node-spectre": "^0.1.0",
     "pngquant-bin": "^5.0.0",
     "puppeteer": "^1.7.0",
-    "reinstall": "^2.0.0",
-    "superagent-proxy": "^1.0.3"
+    "reinstall": "^2.0.0"
   }
 }
