@@ -50,7 +50,7 @@ console.log(`Config: ${test} - Target: ${maskPW(baseURL)}`.yellow);
 let run_id, spectre, screenshot_name;
 
 spectre = new Spectre(setup.spectreServer);
-
+const CM_USER = setup.cmUser;
 const PAGE_LOAD_WAIT = 1000;
 const IDLE_TIMEOUT = 1000;
 
@@ -133,8 +133,8 @@ del.sync(['temp/*.png']);
             await page.goto(baseURL);
             if (await page.$(loginPage.name) !== null) {
                 console.log('Found Login Page')
-                await page.type(loginPage.name, setup.cmUser);
-                await page.type(loginPage.pass, crypto.createHash('md5').update(setup.cmUser).digest('hex'));
+                await page.type(loginPage.name, CM_USER);
+                await page.type(loginPage.pass, crypto.createHash('md5').update(CM_USER).digest('hex'));
                 await page.click(loginPage.commit);
                 await page.waitForNavigation();
             }
