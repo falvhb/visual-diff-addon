@@ -51,6 +51,7 @@ let run_id, spectre, screenshot_name;
 
 spectre = new Spectre(setup.spectreServer);
 const CM_USER = setup.cmUser;
+const CM_BASICAUTH = setup.basicAuth;
 const PAGE_LOAD_WAIT = 1000;
 const IDLE_TIMEOUT = 1000;
 
@@ -122,6 +123,19 @@ del.sync(['temp/*.png']);
                 await page.emulate(setup.device);
             }
             await page.waitFor(PAGE_LOAD_WAIT);
+
+            if (CM_BASICAUTH){
+                const auth = new Buffer(`${CM_BASICAUTH}`).toString('base64');
+                await page.setExtraHTTPHeaders({
+                    'Authorization': `Basic ${auth}`,
+                    'X-Test': 'Automation'                  
+                });
+            } else {
+                //Hint Target about Auto Test
+                await page.setExtraHTTPHeaders({
+                    'X-Test': 'Automation'                    
+                });
+            }
 
             //Catch CM login page
             var loginPage = {
