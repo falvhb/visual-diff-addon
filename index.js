@@ -107,7 +107,7 @@ del.sync(['temp/*.png']);
         });
 
 
-        let setup, hasError, testURL, pageHeight, screenshotParts, uploadResponse, page;
+        let setup, hasError, testURL, pageHeight, screenshotParts, uploadResponse, page, noFullPage;
         for (var j = 0; j < setups.length; j += 1) {
             hasError = false;
             setup = setups[j];
@@ -160,6 +160,9 @@ del.sync(['temp/*.png']);
 
                 testURL = baseURL + config.tests[i].url + ((config.tests[i].url.indexOf('?') > -1) ? '&' : '?') + suffixURL;
 
+
+                noFullPage = (config.tests[i].fullpage === false);
+
                 result.addTest(config.tests[i].name, testURL);
 
                 if (config.tests[i].url.substr(0, 4) === "http") {
@@ -185,7 +188,7 @@ del.sync(['temp/*.png']);
                         return document.body.scrollHeight;
                     });
                     console.log(('Page height:' + pageHeight + ' - Max: ' + splitSize).gray);
-                    if (pageHeight > (splitSize * 1.3)) {
+                    if (!noFullPage && pageHeight > (splitSize * 1.3)) {
                         screenshotParts = Math.ceil(pageHeight / splitSize);
                         console.log(('Splitting in ' + screenshotParts + ' parts.').gray);
                         for (let part = 0; part < screenshotParts; part += 1) {
@@ -217,7 +220,7 @@ del.sync(['temp/*.png']);
                         screenshot_name = 'temp/s' + j + 's' + i + '.png';
                         await page.screenshot({
                             path: screenshot_name,
-                            fullPage: true
+                            fullPage: noFullPage ? false : true
                         });
                         await execFile(pngquant, [screenshot_name]);
                         try {
