@@ -9,6 +9,7 @@ const mkdirp = require('mkdirp');
 const crypto = require('crypto');
 const pngquant = require('pngquant-bin');
 const path = require('path');
+const fs = require('fs');
 
 
 //setup must be available in base folder
@@ -24,8 +25,21 @@ if (argv.test) {
     test = argv.test;
 }
 
-//test config must be available in base folder
-const config = require(path.resolve('./',`${test}.json`));
+//test config must be available in base or visual-tests folder
+let config;
+if (fs.existsSync(path.resolve('./',`${test}.json`))) {
+    config = require(path.resolve('./',`${test}.json`));
+}
+
+if (fs.existsSync(path.resolve('./','visual-tests',`${test}.json`))) {
+    config = require(path.resolve('./','visual-tests',`${test}.json`));
+}
+
+if (typeof config === 'undefined'){
+    console.log('Error: Config json file not found in base or "visual-tests" folder'.red);
+    process.exit(2);
+
+}
 
 let environment = setup.defaults.environment;
 if (argv.env) {
@@ -119,9 +133,11 @@ del.sync(['temp/*.png']);
             if (setup.viewport) {
                 await page.setViewport(setup.viewport);
             }
-            if (setup.device) {
-                await page.emulate(setup.device);
+
+            if (setup.userAgent) {
+                await page.setUserAgent(setup.userAgent);
             }
+
             await page.waitFor(PAGE_LOAD_WAIT);
 
             if (CM_BASICAUTH){
