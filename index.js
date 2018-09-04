@@ -166,7 +166,7 @@ del.sync(['temp/*.png']);
                 await page.type(loginPage.name, CM_USER);
                 await page.type(loginPage.pass, crypto.createHash('md5').update(CM_USER).digest('hex'));
                 await page.click(loginPage.commit);
-                await page.waitForNavigation();
+                await page.waitForNavigation({timeout: 60000});
             }
 
 
