@@ -58,6 +58,7 @@ if (argv.debug) {
  */
 
 const baseURL = eval('`' + config.baseURL + '`');
+const loginURL = eval('`' + config.loginURL + '`');
 
 console.log(`Config: ${test} - Target: ${maskPW(baseURL)}`.yellow);
 
@@ -160,7 +161,8 @@ del.sync(['temp/*.png']);
                 commit: '[name=commit]'
             };
 
-            await page.goto(baseURL);
+            console.log(('URL: ' + maskPW(loginURL || baseURL)).gray);
+            await page.goto(loginURL || baseURL);
             if (await page.$(loginPage.name) !== null) {
                 console.log('Found Login Page')
                 await page.type(loginPage.name, CM_USER);
