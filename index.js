@@ -58,7 +58,7 @@ if (argv.debug) {
  */
 
 const baseURL = eval('`' + config.baseURL + '`');
-const loginURL = eval('`' + config.loginURL + '`');
+const loginURL = config.loginURL ? eval('`' + config.loginURL + '`') : undefined;
 
 console.log(`Config: ${test} - Target: ${maskPW(baseURL)}`.yellow);
 
