@@ -169,11 +169,9 @@ del.sync(['temp/*.png']);
                 await page.type(loginPage.name, CM_USER);
                 await page.type(loginPage.pass, crypto.createHash('md5').update(CM_USER).digest('hex'));
                 await page.click(loginPage.commit);
-                //navigation after login is non deterministic, thatfor just wait 5 seconds and hope everything is ok :)
-                //await page.waitForNavigation({timeout: 60000});
-                await page.waitForNavigation({ waitUntil: 'networkidle2' });
-
-                //await page.waitFor(5000);
+                //navigation after login is non deterministic, thatfor just wait 5 seconds and hope everything is ok :)                
+                //request interception does not work - yet
+                await page.waitFor(5000);
             }
 
 
