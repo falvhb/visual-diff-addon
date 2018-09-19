@@ -58,7 +58,7 @@ if (argv.debug) {
  */
 
 const baseURL = eval('`' + config.baseURL + '`');
-const loginURL = config.loginURL ? eval('`' + config.loginURL + '`') : undefined;
+const loginURL = config.loginURL ? eval('`' + config.loginURL + '`') : 
 
 console.log(`Config: ${test} - Target: ${maskPW(baseURL)}`.yellow);
 
@@ -111,6 +111,7 @@ del.sync(['temp/*.png']);
  * Start Sync Automation
  */
 (async () => {
+    let setup, hasError, testURL, pageHeight, screenshotParts, uploadResponse, page, noFullPage;
     try {
         let spectreObj = await spectre.startRun(config.project, config.suite);
         run_id = spectreObj.id;
@@ -122,7 +123,7 @@ del.sync(['temp/*.png']);
         });
 
 
-        let setup, hasError, testURL, pageHeight, screenshotParts, uploadResponse, page, noFullPage;
+        
         for (var j = 0; j < setups.length; j += 1) {
             hasError = false;
             setup = setups[j];
@@ -168,7 +169,11 @@ del.sync(['temp/*.png']);
                 await page.type(loginPage.name, CM_USER);
                 await page.type(loginPage.pass, crypto.createHash('md5').update(CM_USER).digest('hex'));
                 await page.click(loginPage.commit);
-                await page.waitForNavigation({timeout: 60000});
+                //navigation after login is non deterministic, thatfor just wait 5 seconds and hope everything is ok :)
+                //await page.waitForNavigation({timeout: 60000});
+                await page.waitForNavigation({ waitUntil: 'networkidle2' });
+
+                //await page.waitFor(5000);
             }
 
 
@@ -264,6 +269,9 @@ del.sync(['temp/*.png']);
         result.finish();
 
     } catch (error) {
+        if (page){
+            console.log('Current Page URL: ' + page.url());
+        }
         console.log('ERROR'.red, error);
         returnCode = 1;
         result.error(error);
