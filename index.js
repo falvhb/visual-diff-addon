@@ -204,11 +204,19 @@ del.sync(['temp/*.png']);
                 //time for js to finish
                 await page.waitFor((config.tests[i].wait || 1) * 1000);
 
+                //check height
+                const pageHeight = await page.evaluate(() => {
+                    return document.body.scrollHeight;
+                });
+                console.log(('Page height:' + pageHeight + ' - Max: ' + splitSize).gray);
+
+                if (config.tests[i].hover){
+                    console.log(('Hover over "'  + config.tests[i].hover + '". Fullscreen screenshot disabled.').gray);
+                    noFullPage = true;
+                    await page.hover(config.tests[i].hover);
+                }
+
                 if (!hasError) {
-                    const pageHeight = await page.evaluate(() => {
-                        return document.body.scrollHeight;
-                    });
-                    console.log(('Page height:' + pageHeight + ' - Max: ' + splitSize).gray);
                     if (!noFullPage && pageHeight > (splitSize * 1.3)) {
                         screenshotParts = Math.ceil(pageHeight / splitSize);
                         console.log(('Splitting in ' + screenshotParts + ' parts.').gray);
