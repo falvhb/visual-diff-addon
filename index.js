@@ -103,6 +103,18 @@ function maskPW(s) {
     return s.replace(/\/\/.*:.*@/, '//user:pass@');
 }
 
+function needsAuth(url){
+    var r = (url.indexOf(baseURL) > -1);
+
+    if (!r && setup.authDomains && setup.authDomains.length){
+        for (var i=0,ii=setup.authDomains.length;i<ii;i+=1){
+            if (url.indexOf(setup.authDomains[i]) > -1){
+                r = true;
+            }
+        }
+    }
+    return r;
+}
 
 
 mkdirp.sync('temp');
@@ -145,28 +157,18 @@ del.sync(['temp/*.png']);
 
             await page.waitFor(PAGE_LOAD_WAIT);
 
-            //if (CM_BASICAUTH){
-            //    await page.setExtraHTTPHeaders({
-            //        'Authorization': `Basic ${auth}`,
-            //        'X-Test': 'Automation'                  
-            //    });
-            //} else {
+            if (CM_BASICAUTH){
+                await page.setExtraHTTPHeaders({
+                    'Authorization': `Basic ${auth}`,
+                    'X-Test': 'Automation'                  
+                });
+            } else {
                 //Hint Target about Auto Test
                 await page.setExtraHTTPHeaders({
                     'X-Test': 'Automation'                    
                 });
-            //}
+            }
 
-            await page.setRequestInterception(true);
-            page.on('request', request => {
-              if (CM_BASICAUTH && request.url().indexOf(baseURL) > -1){
-                const headers = request.headers();
-                headers['Authorization'] = `Basic ${auth}`;
-                request.continue({ headers });
-              } else {
-                request.continue();
-              }
-            });
 
 
             //Catch CM login page
@@ -187,23 +189,8 @@ del.sync(['temp/*.png']);
             if (await page.$(loginPage.name) !== null) {
                 console.log('Found Login Page...');
                 await page.type(loginPage.name, CM_USER);
-                console.log('User entered...');
                 await page.type(loginPage.pass, crypto.createHash('md5').update(CM_USER).digest('hex'));
-                console.log('Pass entered...');
-                await page.waitFor(500);
-                await Promise.race([
-                    page.click(loginPage.commit),
-                    new Promise(function(resolve, reject) {
-                        function timeout(){
-                            console.log(('Timeout... trying to continue').red);
-                            //give it some more time to recover.
-                            setTimeout(resolve, 10000);
-                        }
-                        setTimeout(timeout, 10000);
-                    })
-                ]);
-                
-                console.log('Login button hit...');
+                await page.click(loginPage.commit);
                 //navigation after login is non deterministic, thatfor just wait 5 seconds and hope everything is ok :)                
                 await page.waitFor(5000);
                 console.log('Login done!');
@@ -211,6 +198,18 @@ del.sync(['temp/*.png']);
                 console.log('No Login page.');
             }
 
+            //remove auth headers for non-internal requests
+            await page.setRequestInterception(true);
+            page.on('request', request => {
+              if (CM_BASICAUTH && needsAuth(request.url())){
+                request.continue();
+              } else {
+                const headers = request.headers();
+                delete headers['authorization'];
+                request.continue({ headers });
+              }
+            });
+            
 
             for (var i = 0; i < config.tests.length; i += 1) {
 
@@ -229,12 +228,21 @@ del.sync(['temp/*.png']);
                 await page.goto('about:blank');
                 console.log(('URL: ' + maskPW(testURL)).gray);
 
-                await page.goto(testURL, {
-                    waitUntil: 'networkidle2'
-                });
+                try {	                
+                    await page.goto(testURL, {
+                        waitUntil: 'networkidle2',	
+                        timeout: 60000	
+                    });	
+                } catch (ex) {	
+                    hasError = true;	
+                    console.log('Error navigating in Browser: '.red, ex);	
+                }
 
                 //time for js to finish
-                await page.waitFor((config.tests[i].wait || 1) * 1000);
+                if (config.tests[i].wait){
+                    console.log(('Waiting for ' + config.tests[i].wait + ' seconds...').grey )
+                    await page.waitFor((config.tests[i].wait || 1) * 1000);
+                }
 
                 //check height
                 const pageHeight = await page.evaluate(() => {
