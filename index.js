@@ -242,6 +242,8 @@ del.sync(['temp/*.png']);
                 if (config.tests[i].wait){
                     console.log(('Waiting for ' + config.tests[i].wait + ' seconds...').grey )
                     await page.waitFor((config.tests[i].wait || 1) * 1000);
+                } else {
+                    await page.waitFor(1000);
                 }
 
                 //check height
