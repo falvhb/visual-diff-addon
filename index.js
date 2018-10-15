@@ -160,7 +160,6 @@ del.sync(['temp/*.png']);
             await page.setRequestInterception(true);
             page.on('request', request => {
               if (CM_BASICAUTH && request.url().indexOf(baseURL) > -1){
-                console.log(request.url());
                 const headers = request.headers();
                 headers['Authorization'] = `Basic ${auth}`;
                 request.continue({ headers });
