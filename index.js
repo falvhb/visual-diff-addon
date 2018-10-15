@@ -66,7 +66,7 @@ let run_id, spectre, screenshot_name;
 
 spectre = new Spectre(setup.spectreServer);
 const CM_USER = setup.cmUser;
-const CM_BASICAUTH = setup.basicAuth;
+const CM_BASICAUTH = setup.basicAuth || '';
 const PAGE_LOAD_WAIT = 1000;
 const IDLE_TIMEOUT = 1000;
 
@@ -87,6 +87,7 @@ const splitSize = setup.splitSize;
 let returnCode = 0;
 let result = new Result(config, setup);
 
+const auth = new Buffer(`${CM_BASICAUTH}`).toString('base64');
 
 
 function testResult(res) {
@@ -118,8 +119,10 @@ del.sync(['temp/*.png']);
         console.log(('TestID: ' + run_id).gray);
         result.setSpectre(spectreObj);
         const browser = await puppeteer.launch({
-            ignoreHTTPSErrors: true,
-            headless: isHeadless
+            //ignoreHTTPSErrors: true, //causes interception errors
+            dumpio: false,
+            headless: isHeadless,
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
         });
 
 
@@ -142,18 +145,30 @@ del.sync(['temp/*.png']);
 
             await page.waitFor(PAGE_LOAD_WAIT);
 
-            if (CM_BASICAUTH){
-                const auth = new Buffer(`${CM_BASICAUTH}`).toString('base64');
-                await page.setExtraHTTPHeaders({
-                    'Authorization': `Basic ${auth}`,
-                    'X-Test': 'Automation'                  
-                });
-            } else {
+            //if (CM_BASICAUTH){
+            //    await page.setExtraHTTPHeaders({
+            //        'Authorization': `Basic ${auth}`,
+            //        'X-Test': 'Automation'                  
+            //    });
+            //} else {
                 //Hint Target about Auto Test
                 await page.setExtraHTTPHeaders({
                     'X-Test': 'Automation'                    
                 });
-            }
+            //}
+
+            await page.setRequestInterception(true);
+            page.on('request', request => {
+              if (CM_BASICAUTH && request.url().indexOf(baseURL) > -1){
+                console.log(request.url());
+                const headers = request.headers();
+                headers['Authorization'] = `Basic ${auth}`;
+                request.continue({ headers });
+              } else {
+                request.continue();
+              }
+            });
+
 
             //Catch CM login page
             var loginPage = {
@@ -163,15 +178,37 @@ del.sync(['temp/*.png']);
             };
 
             console.log(('URL: ' + maskPW(loginURL || baseURL)).gray);
-            await page.goto(loginURL || baseURL);
+            await page.goto(loginURL || baseURL, {
+                waitUntil: 'networkidle2',
+                timeout: 60000
+            });
+            
+            await page.waitFor(500);
+        
             if (await page.$(loginPage.name) !== null) {
-                console.log('Found Login Page')
+                console.log('Found Login Page...');
                 await page.type(loginPage.name, CM_USER);
+                console.log('User entered...');
                 await page.type(loginPage.pass, crypto.createHash('md5').update(CM_USER).digest('hex'));
-                await page.click(loginPage.commit);
+                console.log('Pass entered...');
+                await page.waitFor(500);
+                await Promise.race([
+                    page.click(loginPage.commit),
+                    new Promise(function(resolve, reject) {
+                        function timeout(){
+                            console.log(('Timeout... trying to continue').red);
+                            resolve();
+                        }
+                        setTimeout(timeout, 5000);
+                    })
+                ]);
+                
+                console.log('Login button hit...');
                 //navigation after login is non deterministic, thatfor just wait 5 seconds and hope everything is ok :)                
-                //request interception does not work - yet
                 await page.waitFor(5000);
+                console.log('Login done!');
+            } else {
+                console.log('No Login page.');
             }
 
 
@@ -192,15 +229,10 @@ del.sync(['temp/*.png']);
                 await page.goto('about:blank');
                 console.log(('URL: ' + maskPW(testURL)).gray);
 
-                try {
-                    await page.goto(testURL, {
-                        waitUntil: 'networkidle2',
-                        timeout: 60000
-                    });
-                } catch (ex) {
-                    hasError = true;
-                    console.log('Error navigating in Browser: '.red, ex);
-                }
+                await page.goto(testURL, {
+                    waitUntil: 'networkidle2'
+                });
+
                 //time for js to finish
                 await page.waitFor((config.tests[i].wait || 1) * 1000);
 
