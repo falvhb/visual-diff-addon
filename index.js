@@ -196,9 +196,10 @@ del.sync(['temp/*.png']);
                     new Promise(function(resolve, reject) {
                         function timeout(){
                             console.log(('Timeout... trying to continue').red);
-                            resolve();
+                            //give it some more time to recover.
+                            setTimeout(resolve, 10000);
                         }
-                        setTimeout(timeout, 5000);
+                        setTimeout(timeout, 10000);
                     })
                 ]);
                 
