@@ -124,7 +124,7 @@ del.sync(['temp/*.png']);
  * Start Sync Automation
  */
 (async () => {
-    let setup, hasError, testURL, pageHeight, screenshotParts, uploadResponse, page, noFullPage;
+    let setup, hasError, testURL, pageHeight, screenshotParts, uploadResponse, page, noFullPage, smartAuth, smartAuthIsOn;
     try {
         let spectreObj = await spectre.startRun(config.project, config.suite);
         run_id = spectreObj.id;
@@ -198,9 +198,22 @@ del.sync(['temp/*.png']);
                 console.log('No Login page.');
             }
 
+            function onRequest(request){
+                if (CM_BASICAUTH && needsAuth(request.url())){
+                  request.continue();
+                } else {
+                  const headers = request.headers();
+                  delete headers['authorization'];
+                  request.continue({ headers });
+                }
+            }
+
             //remove auth headers for non-internal requests
             await page.setRequestInterception(true);
-            page.on('request', request => {
+            page.on('request', onRequest);
+            smartAuthIsOn = true;
+
+            /*page.on('request', request => {
               if (CM_BASICAUTH && needsAuth(request.url())){
                 request.continue();
               } else {
@@ -208,7 +221,7 @@ del.sync(['temp/*.png']);
                 delete headers['authorization'];
                 request.continue({ headers });
               }
-            });
+            });*/
             
 
             for (var i = 0; i < config.tests.length; i += 1) {
@@ -219,6 +232,20 @@ del.sync(['temp/*.png']);
 
 
                 noFullPage = (config.tests[i].fullpage === false);
+
+                //smart authentifiction setup
+                smartAuth = (config.tests[i].smartauth !== false);
+                await page.setRequestInterception(smartAuth);
+                if (smartAuth && !smartAuthIsOn){
+                    console.log('Smart Auth on.'.grey);
+                    page.on('request', onRequest);
+                    smartAuthIsOn =  true;
+                }
+                if (!smartAuth && smartAuthIsOn){
+                    console.log('Smart Auth off.'.grey);
+                    page.removeListener('request', onRequest);
+                    smartAuthIsOn =  false;
+                }
 
                 result.addTest(config.tests[i].name, testURL);
 
@@ -237,6 +264,9 @@ del.sync(['temp/*.png']);
                     hasError = true;	
                     console.log('Error navigating in Browser: '.red, ex);	
                 }
+
+                //abort page loading (what is not ready, is not required)
+                await page._client.send("Page.stopLoading");
 
                 //time for js to finish
                 if (config.tests[i].wait){
