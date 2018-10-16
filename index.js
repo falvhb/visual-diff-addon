@@ -266,7 +266,9 @@ del.sync(['temp/*.png']);
                 }
 
                 //abort page loading (what is not ready, is not required)
-                await page._client.send("Page.stopLoading");
+                if (smartAuth){
+                  await page._client.send("Page.stopLoading");
+                }
 
                 //time for js to finish
                 if (config.tests[i].wait){
