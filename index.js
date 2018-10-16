@@ -117,6 +117,22 @@ function needsAuth(url){
 }
 
 
+function toBeBlocked(url){
+    var r = false;
+    var source = config.blockedDomains || setup.blockedDomains || [];
+
+    if (!r && source && source.length){
+        for (var i=0,ii=source.length;i<ii;i+=1){
+            if (url.indexOf(source[i]) > -1){
+                r = true;
+            }
+        }
+    }
+    return r;
+}
+
+
+
 mkdirp.sync('temp');
 del.sync(['temp/*.png']);
 
@@ -124,7 +140,7 @@ del.sync(['temp/*.png']);
  * Start Sync Automation
  */
 (async () => {
-    let setup, hasError, testURL, pageHeight, screenshotParts, uploadResponse, page, noFullPage, smartAuth, smartAuthIsOn;
+    let setup, hasError, testURL, pageHeight, screenshotParts, uploadResponse, page, noFullPage, smartAuth, smartAuthIsOn, forcestop;
     try {
         let spectreObj = await spectre.startRun(config.project, config.suite);
         run_id = spectreObj.id;
@@ -199,12 +215,17 @@ del.sync(['temp/*.png']);
             }
 
             function onRequest(request){
-                if (CM_BASICAUTH && needsAuth(request.url())){
-                  request.continue();
+                if (toBeBlocked(request.url())){
+                    console.log(('blockedDomains: ' + request.url()).grey);
+                    request.abort();
                 } else {
-                  const headers = request.headers();
-                  delete headers['authorization'];
-                  request.continue({ headers });
+                    if (CM_BASICAUTH && needsAuth(request.url())){
+                    request.continue();
+                    } else {
+                    const headers = request.headers();
+                    delete headers['authorization'];
+                    request.continue({ headers });
+                    }
                 }
             }
 
@@ -232,6 +253,8 @@ del.sync(['temp/*.png']);
 
 
                 noFullPage = (config.tests[i].fullpage === false);
+
+                forcestop = (config.tests[i].forcestop === false);
 
                 //smart authentifiction setup
                 smartAuth = (config.tests[i].smartauth !== false);
@@ -266,13 +289,14 @@ del.sync(['temp/*.png']);
                 }
 
                 //abort page loading (what is not ready, is not required)
-                if (smartAuth){
+                if (forcestop){
+                  console.log(('Page load abort (forcestop:true').grey);
                   await page._client.send("Page.stopLoading");
                 }
 
-                //time for js to finish
+                //time for js to finishc
                 if (config.tests[i].wait){
-                    console.log(('Waiting for ' + config.tests[i].wait + ' seconds...').grey )
+                    console.log(('Waiting for ' + config.tests[i].wait + ' seconds...').grey );
                     await page.waitFor((config.tests[i].wait || 1) * 1000);
                 } else {
                     await page.waitFor(1000);
