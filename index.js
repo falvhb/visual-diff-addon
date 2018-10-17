@@ -254,7 +254,7 @@ del.sync(['temp/*.png']);
 
                 noFullPage = (config.tests[i].fullpage === false);
 
-                forcestop = (config.tests[i].forcestop === false);
+                forcestop = (config.tests[i].forcestop === true);
 
                 //smart authentifiction setup
                 smartAuth = (config.tests[i].smartauth !== false);
